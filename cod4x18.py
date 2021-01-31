@@ -19,6 +19,7 @@
 # CHANGELOG:
 #           0.1 - Initial release
 #           0.2 - Added support for B3Hide plugin, force ID64
+#           0.3 - Fixed SUICIDE event not triggering due to cid -1
 
 __author__ = 'Leiizko'
 __version__ = '0.2'
@@ -115,3 +116,30 @@ class Cod4X18Parser(b3.parsers.cod4.Cod4Parser):
                                                               'duration': duration,
                                                               'admin': admin}, client))
         client.disconnect()
+	
+    def OnK(self, action, data, match=None):
+        issuicide = True if match.group('acid') == '-1' else False
+        victim = self.getClient(victim=match)
+        if not victim:
+            self.debug('No victim')
+            self.OnJ(action, data, match)
+            return None
+        attacker = victim if issuicide else self.getClient(attacker=match)
+        if not attacker:
+            self.debug('No attacker')
+            return None
+
+        attacker.team = self.getTeam(match.group('ateam'))
+        attacker.name = match.group('aname')
+        victim.team = self.getTeam(match.group('team'))
+        victim.name = match.group('name')
+
+        event_key = 'EVT_CLIENT_KILL'
+        if attacker.cid == victim.cid:
+            event_key = 'EVT_CLIENT_SUICIDE'
+        elif attacker.team != b3.TEAM_UNKNOWN and attacker.team == victim.team:
+            event_key = 'EVT_CLIENT_KILL_TEAM'
+
+        victim.state = b3.STATE_DEAD
+        data = (float(match.group('damage')), match.group('aweap'), match.group('dlocation'), match.group('dtype'))
+        return self.getEvent(event_key, data=data, client=attacker, target=victim)
