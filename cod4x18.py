@@ -118,13 +118,12 @@ class Cod4X18Parser(b3.parsers.cod4.Cod4Parser):
         client.disconnect()
 	
     def OnK(self, action, data, match=None):
-        issuicide = True if match.group('acid') == '-1' else False
         victim = self.getClient(victim=match)
         if not victim:
             self.debug('No victim')
             self.OnJ(action, data, match)
             return None
-        attacker = victim if issuicide else self.getClient(attacker=match)
+        attacker = victim if match.group('acid') == '-1' else self.getClient(attacker=match)
         if not attacker:
             self.debug('No attacker')
             return None
